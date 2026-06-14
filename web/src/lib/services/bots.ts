@@ -63,8 +63,10 @@ export async function dispatchABot(bot: { webhookUrl: string }, d: DatosDispatch
       conversacionId: d.conversacionId.toString(),
       contactoId: d.contactoId.toString(),
       telefono: d.telefono,
+      nombre: d.nombre,
       responder_url: `${BASE}/api/v1/accounts/1/conversations/${d.conversacionId}/messages`,
-      handoff_url: `${BASE}/api/v1/accounts/1/conversations/${d.conversacionId}/labels`
+      handoff_url: `${BASE}/api/v1/accounts/1/conversations/${d.conversacionId}/labels`,
+      funnel_url: `${BASE}/api/v1/accounts/1/conversations/${d.conversacionId}/funnel`
     }
   };
 
