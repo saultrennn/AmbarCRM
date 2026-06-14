@@ -29,8 +29,12 @@ async function req(
       body: body !== undefined ? JSON.stringify(body) : undefined
     });
     const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      console.warn(`[evolution] ${metodo} ${path} -> ${res.status}`, JSON.stringify(data).slice(0, 300));
+    }
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
+    console.warn(`[evolution] ${metodo} ${path} -> red KO (BASE="${BASE}")`, e instanceof Error ? e.message : e);
     return { ok: false, status: 0, data: { message: e instanceof Error ? e.message : "error de red" } };
   }
 }
