@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMetricasDashboard } from "@/lib/services/dashboard";
+import { IconoDescargar } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -97,11 +98,11 @@ export default async function DashboardPage() {
         <h2 className="mb-3 text-sm font-semibold text-slate-600">Reportes (CSV)</h2>
         <div className="flex flex-wrap gap-2 text-sm">
           <a href={`/api/reportes/oportunidades?desde=${iniMes}&hasta=${finMes}`} download
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50">⬇ Oportunidades ({mes})</a>
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50"><IconoDescargar className="h-4 w-4" /> Oportunidades ({mes})</a>
           <a href="/api/reportes/oportunidades" download
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50">⬇ Oportunidades (todo)</a>
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50"><IconoDescargar className="h-4 w-4" /> Oportunidades (todo)</a>
           <a href={`/api/reportes/csat?desde=${iniMes}&hasta=${finMes}`} download
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50">⬇ CSAT ({mes})</a>
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-navy hover:bg-slate-50"><IconoDescargar className="h-4 w-4" /> CSAT ({mes})</a>
         </div>
       </div>
     </div>

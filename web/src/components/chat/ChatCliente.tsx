@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { aplicarVariables } from "@/lib/plantillas";
 import { PanelConversacion } from "@/components/chat/PanelConversacion";
+import { IconoAdjuntar, IconoIA, IconoMicro, IconoNota, IconoInfo, IconoEnviar } from "@/components/icons";
 
 type Embudo = { id: string; nombre: string; etapas: { id: string; nombre: string }[] };
 type Usuario = { id: string; nombre: string };
@@ -42,7 +43,7 @@ function ticks(status: string): { txt: string; clase: string } {
     case "leido": return { txt: "✓✓", clase: "text-sky-500" };
     case "entregado": return { txt: "✓✓", clase: "text-slate-400" };
     case "enviado": return { txt: "✓", clase: "text-slate-400" };
-    case "fallido": return { txt: "⚠️", clase: "text-red-500" };
+    case "fallido": return { txt: "!", clase: "font-bold text-red-500" };
     default: return { txt: "", clase: "" };
   }
 }
@@ -149,6 +150,18 @@ export function ChatCliente({
     setMensajes(data.mensajes);
   }, []);
 
+  // Refresca la bandeja desde el server (preview = último mensaje, orden y no-leídos exactos).
+  const refrescarRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refrescarLista = useCallback(() => {
+    if (refrescarRef.current) clearTimeout(refrescarRef.current);
+    refrescarRef.current = setTimeout(async () => {
+      const res = await fetch("/api/conversaciones");
+      if (!res.ok) return;
+      const data = await res.json();
+      setConvs(data.conversaciones);
+    }, 400);
+  }, []);
+
   function abrir(id: string) {
     setSelId(id);
     setConvs((prev) => prev.map((c) => (c.id === id ? { ...c, noLeidos: 0 } : c)));
@@ -179,20 +192,11 @@ export function ChatCliente({
         reproducirBeep();
         notificar("Nuevo mensaje de WhatsApp", conv ? conv.contacto.nombre : "Tienes un mensaje nuevo");
       }
-      setConvs((prev) =>
-        prev.map((c) =>
-          c.id === convId
-            ? {
-                ...c,
-                noLeidos: esEntrante && convId !== selRef.current ? c.noLeidos + 1 : c.noLeidos,
-                ultimoMensajeAt: new Date().toISOString()
-              }
-            : c
-        )
-      );
+      // Trae la lista actualizada del server (preview correcto + orden + no-leídos).
+      refrescarLista();
     };
     return () => es.close();
-  }, [cargarMensajes]);
+  }, [cargarMensajes, refrescarLista]);
 
   // Autoscroll al final
   useEffect(() => {
@@ -212,7 +216,7 @@ export function ChatCliente({
     const data = await res.json().catch(() => ({}));
     if (data?.mensaje) {
       setMensajes((prev) => (prev.some((m) => m.id === data.mensaje.id) ? prev : [...prev, data.mensaje]));
-      const preview = notaInterna ? `📝 ${texto}` : texto;
+      const preview = notaInterna ? `Nota: ${texto}` : texto;
       setConvs((prev) => prev.map((c) => (c.id === selId ? { ...c, ultimoMensajeAt: new Date().toISOString(), preview } : c)));
       setTexto("");
       setNotaInterna(false);
@@ -378,9 +382,9 @@ export function ChatCliente({
               <button
                 onClick={() => setPanelMovil(true)}
                 title="Detalles y oportunidades"
-                className="ml-auto rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 lg:hidden"
+                className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
               >
-                ℹ️
+                <IconoInfo className="h-5 w-5" />
               </button>
             </div>
 
@@ -396,7 +400,11 @@ export function ChatCliente({
                         : "bg-white text-slate-800"
                     }`}
                   >
-                    {m.interna && <p className="mb-0.5 text-[10px] font-semibold uppercase text-amber-600">📝 Nota interna</p>}
+                    {m.interna && (
+                      <p className="mb-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase text-amber-600">
+                        <IconoNota className="h-3 w-3" /> Nota interna
+                      </p>
+                    )}
                     {m.tipo === "imagen" && m.mediaUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <a href={m.mediaUrl} target="_blank">
@@ -406,8 +414,8 @@ export function ChatCliente({
                       <audio controls src={m.mediaUrl} className="mb-1 h-10 w-56 max-w-full" />
                     ) : (
                       m.tipo !== "texto" && m.mediaUrl && (
-                        <a href={m.mediaUrl} target="_blank" className="mb-1 block text-xs text-navy underline">
-                          📎 {m.tipo}
+                        <a href={m.mediaUrl} target="_blank" className="mb-1 flex items-center gap-1 text-xs text-navy underline">
+                          <IconoAdjuntar className="h-3.5 w-3.5" /> {m.tipo}
                         </a>
                       )
                     )}
@@ -474,7 +482,7 @@ export function ChatCliente({
                 onClick={() => archivoRef.current?.click()}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50"
               >
-                📎
+                <IconoAdjuntar />
               </button>
               <button
                 type="button"
@@ -483,7 +491,7 @@ export function ChatCliente({
                 onClick={sugerir}
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50"
               >
-                {sugiriendo ? "…" : "✨"}
+                {sugiriendo ? <span className="text-xs">…</span> : <IconoIA />}
               </button>
               <button
                 type="button"
@@ -492,7 +500,7 @@ export function ChatCliente({
                 onClick={grabarVoz}
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-slate-100 disabled:opacity-50 ${grabando ? "animate-pulse bg-red-100 text-red-600" : "text-slate-500"}`}
               >
-                {grabando ? "⏺" : "🎤"}
+                {grabando ? <span className="h-3 w-3 rounded-full bg-red-600" /> : <IconoMicro />}
               </button>
               <button
                 type="button"
@@ -500,7 +508,7 @@ export function ChatCliente({
                 onClick={() => setNotaInterna((v) => !v)}
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-full hover:bg-slate-100 ${notaInterna ? "bg-amber-100 text-amber-600" : "text-slate-500"}`}
               >
-                📝
+                <IconoNota />
               </button>
               <input
                 value={texto}
@@ -513,7 +521,7 @@ export function ChatCliente({
                 disabled={enviando || !texto.trim()}
                 className="grid h-10 w-10 place-items-center rounded-full bg-navy text-white disabled:opacity-50"
               >
-                ➤
+                <IconoEnviar className="h-5 w-5" />
               </button>
             </form>
           </>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Boton, Campo, Modal } from "@/components/ui";
+import { IconoReloj } from "@/components/icons";
 
 type Tarea = {
   id: string;
@@ -103,8 +104,8 @@ export function TareasCliente({
           {t.descripcion && <p className="text-xs text-slate-500">{t.descripcion}</p>}
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
             {t.venceAt && (
-              <span className={vencida(t.venceAt) && !t.completada ? "font-medium text-red-600" : "text-slate-400"}>
-                ⏰ {fecha(t.venceAt)}
+              <span className={`flex items-center gap-1 ${vencida(t.venceAt) && !t.completada ? "font-medium text-red-600" : "text-slate-400"}`}>
+                <IconoReloj className="h-3 w-3" /> {fecha(t.venceAt)}
               </span>
             )}
             {t.responsable && <span className="text-slate-400">· {t.responsable}</span>}
@@ -128,10 +129,10 @@ export function TareasCliente({
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        {pendientes.length === 0 && <p className="py-4 text-sm text-slate-400">Nada pendiente 🎉</p>}
+        {pendientes.length === 0 && <p className="py-4 text-sm text-slate-400">Nada pendiente</p>}
 
         {grupos.vencidas.length > 0 && (
-          <Grupo titulo={`⚠️ Vencidas (${grupos.vencidas.length})`} clase="text-red-600">
+          <Grupo titulo={`Vencidas (${grupos.vencidas.length})`} clase="text-red-600">
             {grupos.vencidas.map((t) => <Fila key={t.id} t={t} />)}
           </Grupo>
         )}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Boton, Campo, Modal } from "@/components/ui";
+import { IconoBot } from "@/components/icons";
 
 type Embudo = { id: string; nombre: string; etapas: { id: string; nombre: string }[] };
 type Usuario = { id: string; nombre: string };
@@ -194,7 +195,7 @@ export function PanelConversacion({
       )}
 
       <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
-        <span className="text-sm text-slate-700">🤖 Bot {d.botActivo ? "activo" : "en pausa"}</span>
+        <span className="flex items-center gap-1.5 text-sm text-slate-700"><IconoBot className="h-4 w-4" /> Bot {d.botActivo ? "activo" : "en pausa"}</span>
         <button
           onClick={() => patch({ botActivo: !d.botActivo })}
           className={`relative h-5 w-9 rounded-full transition ${d.botActivo ? "bg-green-500" : "bg-slate-300"}`}
