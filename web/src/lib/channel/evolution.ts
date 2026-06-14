@@ -8,6 +8,7 @@ import type {
   ImportContacto,
   MensajeEntranteNormalizado,
   MensajeGrupoNormalizado,
+  MensajeHistorial,
   ResultadoEnvio,
   TipoMensaje
 } from "./types";
@@ -303,6 +304,36 @@ export const evolutionProvider: ChannelProvider = {
     if (!ok) return null;
     const g = Array.isArray(data) ? data[0] : data;
     return { nombre: g?.subject ?? undefined };
+  },
+
+  async obtenerMensajes(instancia, jid, limite = 5) {
+    const { ok, data } = await req("POST", `/chat/findMessages/${instancia}`, { where: { key: { remoteJid: jid } } });
+    if (!ok) return [];
+    const recs: any[] = data?.messages?.records ?? data?.records ?? (Array.isArray(data) ? data : []);
+    const ordenados = [...recs].sort((a, b) => Number(a?.messageTimestamp || 0) - Number(b?.messageTimestamp || 0));
+    return ordenados.slice(-limite).map((m): MensajeHistorial => {
+      const { tipo, contenido, mediaUrl, mediaMime } = extraerContenido(m?.message ?? {});
+      return {
+        direccion: (m?.key?.fromMe ? "saliente" : "entrante") as "saliente" | "entrante",
+        tipo,
+        contenido,
+        mediaUrl,
+        mediaMime,
+        waMessageId: m?.key?.id ?? `${Date.now()}-${Math.random()}`,
+        timestamp: m?.messageTimestamp ? new Date(Number(m.messageTimestamp) * 1000) : new Date(),
+        remitenteNombre: m?.pushName,
+        remitenteTel: (m?.key?.participant ?? "").split("@")[0].replace(/\D/g, "") || undefined
+      };
+    });
+  },
+
+  async listarGruposWA(instancia) {
+    const { ok, data } = await req("GET", `/group/fetchAllGroups/${instancia}?getParticipants=false`);
+    if (!ok) return [];
+    const arr: any[] = Array.isArray(data) ? data : data?.records ?? [];
+    return arr
+      .map((g) => ({ jid: g?.id ?? g?.jid ?? "", nombre: g?.subject ?? String(g?.id ?? "").split("@")[0] }))
+      .filter((g) => g.jid.includes("@g.us"));
   }
 };
 

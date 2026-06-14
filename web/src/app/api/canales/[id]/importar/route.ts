@@ -65,8 +65,31 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     });
     chatsNuevos++;
 
-    // Guarda el último mensaje como preview (entrante) si vino texto.
-    if (ch.ultimoTexto?.trim()) {
+    // Importa los últimos mensajes (entrantes y salientes) para dar contexto al agente.
+    const historial = provider.obtenerMensajes
+      ? await provider.obtenerMensajes(instancia, `${ch.telefono}@s.whatsapp.net`, 5)
+      : [];
+
+    if (historial.length) {
+      for (const h of historial) {
+        await db.mensaje.upsert({
+          where: { waMessageId: h.waMessageId },
+          update: {},
+          create: {
+            conversacionId: conv.id,
+            direccion: h.direccion,
+            tipo: h.tipo,
+            contenido: h.contenido ?? (h.tipo !== "texto" ? `[${h.tipo}]` : null),
+            mediaMime: h.mediaMime ?? null,
+            status: h.direccion === "entrante" ? "entregado" : "enviado",
+            waMessageId: h.waMessageId,
+            timestamp: h.timestamp
+          }
+        });
+      }
+      const ult = historial[historial.length - 1];
+      await db.conversacion.update({ where: { id: conv.id }, data: { ultimoMensajeAt: ult.timestamp } });
+    } else if (ch.ultimoTexto?.trim()) {
       await db.mensaje.create({
         data: {
           conversacionId: conv.id,

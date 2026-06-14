@@ -33,6 +33,7 @@ export function GruposCliente({ gruposIniciales }: { gruposIniciales: GrupoItem[
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [importando, setImportando] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   const selRef = useRef<string | null>(null);
@@ -67,6 +68,15 @@ export function GruposCliente({ gruposIniciales }: { gruposIniciales: GrupoItem[
     return () => clearInterval(t);
   }, [selId, cargarMensajes]);
   useEffect(() => { finRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensajes]);
+
+  async function importar() {
+    setImportando(true);
+    const res = await fetch("/api/grupos/importar", { method: "POST" });
+    const d = await res.json().catch(() => ({}));
+    setImportando(false);
+    if (res.ok) { await refrescarLista(); alert(`Importados ${d.gruposNuevos} grupos nuevos (de ${d.grupos}).`); }
+    else alert(d.error ?? "No se pudo importar");
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +116,13 @@ export function GruposCliente({ gruposIniciales }: { gruposIniciales: GrupoItem[
   return (
     <div className="flex h-full">
       <div className={`w-full border-r border-slate-200 bg-white md:w-80 ${selId ? "hidden md:block" : ""}`}>
-        <div className="border-b border-slate-200 px-4 py-3 font-semibold text-navy">Grupos</div>
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <span className="font-semibold text-navy">Grupos</span>
+          <button onClick={importar} disabled={importando}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-navy hover:bg-slate-50 disabled:opacity-50">
+            {importando ? "Importando…" : "Importar grupos"}
+          </button>
+        </div>
         <div className="scroll-thin h-[calc(100%-49px)] overflow-y-auto">
           {grupos.length === 0 && <p className="p-4 text-sm text-slate-400">Aún no hay grupos. Llegarán cuando reciban mensajes.</p>}
           {grupos.map((g) => (

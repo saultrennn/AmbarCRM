@@ -44,6 +44,19 @@ export interface MensajeGrupoNormalizado {
   timestamp: Date;
 }
 
+/** Mensaje histórico (para importar últimos N de una conversación o grupo). */
+export interface MensajeHistorial {
+  direccion: "entrante" | "saliente";
+  tipo: TipoMensaje;
+  contenido?: string;
+  mediaUrl?: string;
+  mediaMime?: string;
+  waMessageId: string;
+  timestamp: Date;
+  remitenteNombre?: string;
+  remitenteTel?: string;
+}
+
 /** Estado de un mensaje saliente reportado por el proveedor (acuses). */
 export type EstadoMensaje = "enviado" | "entregado" | "leido" | "fallido";
 
@@ -108,6 +121,12 @@ export interface ChannelProvider {
 
   /** Nombre/asunto de un grupo. */
   infoGrupo?(instancia: string, jid: string): Promise<{ nombre?: string } | null>;
+
+  /** Últimos N mensajes de un chat o grupo (por jid), para importar historial. */
+  obtenerMensajes?(instancia: string, jid: string, limite?: number): Promise<MensajeHistorial[]>;
+
+  /** Lista los grupos del número. */
+  listarGruposWA?(instancia: string): Promise<{ jid: string; nombre: string }[]>;
 
   // --- Gestión de conexión (opcional) ---
   // Solo aplica a proveedores que vinculan por QR (Evolution). Cloud API usa token,
