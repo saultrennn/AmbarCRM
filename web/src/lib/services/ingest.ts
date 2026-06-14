@@ -81,15 +81,17 @@ export async function ingestarEntrante(m: MensajeEntranteNormalizado, canalId: b
     }
   }
 
+  const esSaliente = m.direccion === "saliente";
+
   const mensaje = await db.mensaje.create({
     data: {
       conversacionId: conversacion.id,
-      direccion: "entrante",
+      direccion: esSaliente ? "saliente" : "entrante",
       tipo: m.tipo,
       contenido: m.contenido,
       mediaUrl,
       mediaMime,
-      status: "entregado",
+      status: esSaliente ? "enviado" : "entregado",
       waMessageId: m.waMessageId,
       timestamp: m.timestamp
     }
@@ -97,8 +99,16 @@ export async function ingestarEntrante(m: MensajeEntranteNormalizado, canalId: b
 
   await db.conversacion.update({
     where: { id: conversacion.id },
-    data: { noLeidos: { increment: 1 }, ultimoMensajeAt: m.timestamp, estado: "abierta" }
+    data: esSaliente
+      ? { ultimoMensajeAt: m.timestamp }
+      : { noLeidos: { increment: 1 }, ultimoMensajeAt: m.timestamp, estado: "abierta" }
   });
+
+  // Si lo mandó el propio número (desde el celular), no hay nada más que hacer:
+  // no es un lead entrante, no notifica al bot, ni CSAT, ni bienvenida.
+  if (esSaliente) {
+    return { duplicado: false as const, mensajeId: mensaje.id, conversacionId: conversacion.id };
+  }
 
   // --- CSAT: si la conversación esperaba calificación y llegó un 1-5, lo guardamos y no seguimos ---
   if (await capturarCsat(conversacion, m.contenido)) {

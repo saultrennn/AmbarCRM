@@ -14,6 +14,7 @@ export interface MensajeEntranteNormalizado {
   contenido?: string;           // texto o caption
   mediaUrl?: string;            // URL cruda del proveedor (cifrada en WhatsApp, no servible)
   mediaMime?: string;
+  direccion?: "entrante" | "saliente"; // saliente = lo mandó el propio número (desde el celular)
   raw?: unknown;                // mensaje original del proveedor (para descargar el media)
   timestamp: Date;
 }

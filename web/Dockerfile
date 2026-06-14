@@ -12,4 +12,5 @@ COPY . .
 RUN npx prisma generate && npm run build
 
 EXPOSE 3000
-CMD ["npm", "start"]
+# Sincroniza el esquema de la BD en cada arranque (crea tablas/columnas nuevas) y luego inicia.
+CMD npx prisma db push --skip-generate && npm start

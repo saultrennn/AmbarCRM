@@ -182,7 +182,6 @@ export const evolutionProvider: ChannelProvider = {
 
     const out: MensajeEntranteNormalizado[] = [];
     for (const m of items) {
-      if (m?.key?.fromMe) continue; // ignorar lo que envió el propio número
       // Solo chats individuales: ignora grupos (@g.us), estados y difusiones.
       const telefono = jidIndividual(m?.key?.remoteJid ?? "");
       if (!telefono) continue;
@@ -196,6 +195,8 @@ export const evolutionProvider: ChannelProvider = {
         contenido,
         mediaUrl,
         mediaMime,
+        // fromMe = lo mandó el propio número (desde el celular) -> saliente.
+        direccion: m?.key?.fromMe ? "saliente" : "entrante",
         raw: m,
         timestamp: m?.messageTimestamp ? new Date(Number(m.messageTimestamp) * 1000) : new Date()
       });
