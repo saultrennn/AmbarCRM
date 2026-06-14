@@ -59,6 +59,7 @@ export function GruposCliente({ gruposIniciales }: { gruposIniciales: GrupoItem[
 
   // Polling (los grupos no usan SSE): lista cada 6 s, hilo abierto cada 4 s.
   useEffect(() => {
+    refrescarLista(); // fresco al entrar (evita la lista cacheada de Next)
     const t = setInterval(refrescarLista, 6000);
     return () => clearInterval(t);
   }, [refrescarLista]);

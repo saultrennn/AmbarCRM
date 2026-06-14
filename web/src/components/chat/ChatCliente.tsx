@@ -175,6 +175,11 @@ export function ChatCliente({
     }
   }, []);
 
+  // Al entrar a la pantalla (incluye navegación con caché de Next) trae la lista fresca del server.
+  useEffect(() => {
+    refrescarLista();
+  }, [refrescarLista]);
+
   // SSE: mensajes en vivo
   useEffect(() => {
     const es = new EventSource("/api/stream");
