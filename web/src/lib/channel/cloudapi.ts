@@ -30,7 +30,7 @@ export const cloudApiProvider: ChannelProvider = {
     return send({ to: telefono, type: "text", text: { body: texto } });
   },
 
-  async enviarMedia(telefono, mediaUrl, tipo: TipoMensaje, caption) {
+  async enviarMedia(telefono, mediaUrl, tipo: TipoMensaje, caption, _mimetype?: string) {
     const map: Record<string, string> = {
       imagen: "image", video: "video", audio: "audio", documento: "document"
     };

@@ -30,6 +30,7 @@ export default async function EmbudosPage({
       titulo: o.titulo,
       valor: Number(o.valor),
       moneda: o.moneda,
+      createdAt: o.createdAt,
       contacto: { nombre: o.contacto.nombre, telefono: o.contacto.telefono },
       responsable: o.responsable ? { nombre: o.responsable.nombre } : null
     }))

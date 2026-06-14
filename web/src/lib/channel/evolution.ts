@@ -99,11 +99,16 @@ export const evolutionProvider: ChannelProvider = {
     return post(`/message/sendText/${INSTANCE}`, { number: telefono, text: texto });
   },
 
-  async enviarMedia(telefono, mediaUrl, tipo, caption) {
+  async enviarMedia(telefono, mediaUrl, tipo, caption, mimetype) {
+    // Evolution quiere URL o base64 PURO (sin el prefijo data:...;base64,).
+    const media = mediaUrl.startsWith("data:") ? mediaUrl.split(",")[1] : mediaUrl;
+    const ext = (mimetype?.split("/")[1] || "bin").split(";")[0];
     return post(`/message/sendMedia/${INSTANCE}`, {
       number: telefono,
       mediatype: mapTipoMedia(tipo),
-      media: mediaUrl,
+      mimetype: mimetype || undefined,
+      media,
+      fileName: `archivo.${ext}`,
       caption: caption ?? ""
     });
   },

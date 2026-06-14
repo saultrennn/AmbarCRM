@@ -67,7 +67,8 @@ export interface ChannelProvider {
     telefono: string,
     mediaUrl: string,
     tipo: TipoMensaje,
-    caption?: string
+    caption?: string,
+    mimetype?: string
   ): Promise<ResultadoEnvio>;
 
   /** Envía un audio como nota de voz (PTT). Recibe base64 (sin prefijo data:). */

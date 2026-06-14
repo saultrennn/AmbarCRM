@@ -18,15 +18,41 @@ export type Tarjeta = {
   titulo: string;
   valor: number;
   moneda: string;
+  createdAt: string;
   contacto: { nombre: string; telefono: string | null };
   responsable: { nombre: string } | null;
 };
 export type Columna = { id: string; nombre: string; color: string; tipo: string; tarjetas: Tarjeta[] };
 
-function TarjetaVista({ t }: { t: Tarjeta }) {
+type Rango = "todo" | "hoy" | "semana" | "mes";
+
+function dentroDeRango(iso: string, rango: Rango): boolean {
+  if (rango === "todo") return true;
+  const d = new Date(iso);
+  const ahora = new Date();
+  if (rango === "hoy") {
+    const ini = new Date(); ini.setHours(0, 0, 0, 0);
+    return d >= ini;
+  }
+  const dias = rango === "semana" ? 7 : 30;
+  const desde = new Date(ahora.getTime() - dias * 24 * 60 * 60 * 1000);
+  return d >= desde;
+}
+
+function TarjetaVista({ t, onBorrar }: { t: Tarjeta; onBorrar?: (id: string) => void }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-      <p className="text-sm font-medium text-slate-800">{t.titulo}</p>
+    <div className="group relative rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      {onBorrar && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onBorrar(t.id)}
+          title="Quitar del embudo"
+          className="absolute right-1.5 top-1.5 hidden h-5 w-5 place-items-center rounded text-slate-300 hover:bg-red-50 hover:text-red-600 group-hover:grid"
+        >
+          ✕
+        </button>
+      )}
+      <p className="pr-5 text-sm font-medium text-slate-800">{t.titulo}</p>
       <p className="mt-0.5 text-xs text-slate-500">{t.contacto.nombre}</p>
       <div className="mt-2 flex items-center justify-between">
         <span className="text-sm font-semibold text-ambar">{formatoMoneda(t.valor, t.moneda)}</span>
@@ -47,7 +73,7 @@ function TarjetaVista({ t }: { t: Tarjeta }) {
   );
 }
 
-function TarjetaSortable({ t }: { t: Tarjeta }) {
+function TarjetaSortable({ t, onBorrar }: { t: Tarjeta; onBorrar: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id });
   return (
     <div
@@ -57,12 +83,12 @@ function TarjetaSortable({ t }: { t: Tarjeta }) {
       {...listeners}
       className="cursor-grab active:cursor-grabbing"
     >
-      <TarjetaVista t={t} />
+      <TarjetaVista t={t} onBorrar={onBorrar} />
     </div>
   );
 }
 
-function ColumnaVista({ col }: { col: Columna }) {
+function ColumnaVista({ col, onBorrar }: { col: Columna; onBorrar: (id: string) => void }) {
   const { setNodeRef } = useDroppable({ id: `col-${col.id}` });
   const total = col.tarjetas.reduce((s, t) => s + t.valor, 0);
   return (
@@ -77,17 +103,37 @@ function ColumnaVista({ col }: { col: Columna }) {
       </div>
       <div ref={setNodeRef} className="scroll-thin flex-1 space-y-2 overflow-y-auto px-2 pb-3">
         <SortableContext items={col.tarjetas.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {col.tarjetas.map((t) => <TarjetaSortable key={t.id} t={t} />)}
+          {col.tarjetas.map((t) => <TarjetaSortable key={t.id} t={t} onBorrar={onBorrar} />)}
         </SortableContext>
       </div>
     </div>
   );
 }
 
+const RANGOS: { id: Rango; label: string }[] = [
+  { id: "todo", label: "Todo" },
+  { id: "hoy", label: "Hoy" },
+  { id: "semana", label: "Semana" },
+  { id: "mes", label: "Mes" }
+];
+
 export function Board({ columnasIniciales }: { columnasIniciales: Columna[] }) {
   const [cols, setCols] = useState<Columna[]>(columnasIniciales);
   const [activa, setActiva] = useState<Tarjeta | null>(null);
+  const [rango, setRango] = useState<Rango>("todo");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Vista filtrada por fecha de creación (no toca `cols`, que es la fuente para drag/persistencia).
+  const colsVistas = useMemo(
+    () => cols.map((c) => ({ ...c, tarjetas: c.tarjetas.filter((t) => dentroDeRango(t.createdAt, rango)) })),
+    [cols, rango]
+  );
+
+  async function borrar(id: string) {
+    if (!confirm("¿Quitar esta tarjeta del embudo? (No borra el contacto, solo la oportunidad.)")) return;
+    setCols((prev) => prev.map((c) => ({ ...c, tarjetas: c.tarjetas.filter((t) => t.id !== id) })));
+    await fetch(`/api/oportunidades/${id}`, { method: "DELETE" }).catch(() => {});
+  }
 
   const idsPorColumna = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -162,11 +208,25 @@ export function Board({ columnasIniciales }: { columnasIniciales: Columna[] }) {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
-      <div className="flex h-full gap-3 overflow-x-auto p-4">
-        {cols.map((c) => <ColumnaVista key={c.id} col={c} />)}
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-1 px-4 pt-3">
+        <span className="mr-1 text-xs text-slate-400">Ver:</span>
+        {RANGOS.map((r) => (
+          <button
+            key={r.id}
+            onClick={() => setRango(r.id)}
+            className={`rounded-lg px-2.5 py-1 text-xs font-medium ${rango === r.id ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"}`}
+          >
+            {r.label}
+          </button>
+        ))}
       </div>
-      <DragOverlay>{activa ? <div className="w-72"><TarjetaVista t={activa} /></div> : null}</DragOverlay>
-    </DndContext>
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
+        <div className="flex flex-1 gap-3 overflow-x-auto p-4">
+          {colsVistas.map((c) => <ColumnaVista key={c.id} col={c} onBorrar={borrar} />)}
+        </div>
+        <DragOverlay>{activa ? <div className="w-72"><TarjetaVista t={activa} /></div> : null}</DragOverlay>
+      </DndContext>
+    </div>
   );
 }

@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   } else if (esMedia) {
     const tipo = tipoDesdeMime(mediaMime ?? "");
     // A WhatsApp va el base64; en local guardamos el archivo para verlo en el hilo del CRM.
-    envio = await provider.enviarMedia(conv.contacto.telefono, mediaBase64, tipo, caption?.trim() || undefined);
+    envio = await provider.enviarMedia(conv.contacto.telefono, mediaBase64, tipo, caption?.trim() || undefined, mediaMime);
     const urlLocal = await guardarMediaBase64(mediaBase64, mediaMime ?? "application/octet-stream");
     datosMensaje = { tipo, contenido: caption?.trim() || null, mediaUrl: urlLocal, mediaMime: mediaMime ?? null };
   } else {
