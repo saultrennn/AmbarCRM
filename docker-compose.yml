@@ -35,8 +35,11 @@ services:
     volumes:
       # Media saliente del chat (imágenes/archivos que mandan los agentes).
       - uploads:/app/uploads
-    ports:
-      - "3000:3000"
+    # En EasyPanel NO se publican puertos: el dominio se mapea al puerto 3000 del
+    # contenedor por la red interna (Domains → Target port 3000). El contenedor ya
+    # lo expone vía EXPOSE 3000 en el Dockerfile.
+    expose:
+      - "3000"
 
 volumes:
   pgdata:
