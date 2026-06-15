@@ -11,8 +11,8 @@ function fecha(iso: string | null) {
 }
 
 const ICONO_EVENTO: Record<string, string> = {
-  creada: "🟢", etapa_cambio: "🔀", ganada: "🏆", perdida: "❌",
-  nota: "📝", tarea: "✅", mensaje: "💬", asignacion: "👤"
+  creada: "·", etapa_cambio: "→", ganada: "★", perdida: "✕",
+  nota: "—", tarea: "□", mensaje: "◇", asignacion: "◎"
 };
 const ETIQUETA_EVENTO: Record<string, string> = {
   creada: "Creada", etapa_cambio: "Cambio de etapa", ganada: "Ganada", perdida: "Perdida",
@@ -96,7 +96,7 @@ export function OportunidadCliente({ op }: { op: any }) {
             href={convId ? `/chat?conv=${convId}` : "/chat"}
             className="rounded-lg bg-green-100 px-3 py-1 font-medium text-green-700 hover:bg-green-200"
           >
-            💬 Abrir chat
+            Abrir chat
           </Link>
         )}
       </div>
@@ -104,7 +104,7 @@ export function OportunidadCliente({ op }: { op: any }) {
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Notas */}
         <section className="rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-semibold text-slate-700">📝 Notas</h2>
+          <h2 className="mb-3 font-semibold text-slate-700">Notas</h2>
           <form onSubmit={agregarNota} className="mb-3 space-y-2">
             <textarea value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Escribe una nota…"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-navy/30" rows={2} />
@@ -123,7 +123,7 @@ export function OportunidadCliente({ op }: { op: any }) {
 
         {/* Tareas */}
         <section className="rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-semibold text-slate-700">✅ Tareas</h2>
+          <h2 className="mb-3 font-semibold text-slate-700">Tareas</h2>
           <form onSubmit={agregarTarea} className="mb-3 flex gap-2">
             <input value={tarea} onChange={(e) => setTarea(e.target.value)} placeholder="Nueva tarea…"
               className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-navy/30" />
@@ -143,7 +143,7 @@ export function OportunidadCliente({ op }: { op: any }) {
 
         {/* Timeline */}
         <section className="rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-semibold text-slate-700">🕐 Historial</h2>
+          <h2 className="mb-3 font-semibold text-slate-700">Historial</h2>
           <div className="space-y-3">
             {op.eventos.length === 0 && <p className="text-sm text-slate-400">Sin actividad registrada.</p>}
             {op.eventos.map((ev: any) => (

@@ -67,7 +67,7 @@ export function DifusionCliente({ etiquetas, plantillas }: { etiquetas: Etiqueta
 
       {/* Alerta de riesgo */}
       <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-slate-700">
-        <p className="mb-1 font-semibold text-red-700">⚠️ Riesgo de baneo — lee antes de enviar</p>
+        <p className="mb-1 font-semibold text-red-700">Riesgo de baneo — lee antes de enviar</p>
         <ul className="list-disc space-y-1 pl-4 text-slate-600">
           <li>WhatsApp detecta patrones de envío masivo y puede <b>bloquear permanentemente</b> el número.</li>
           <li>El límite es <b>{LIMITE_DIARIO} mensajes por día</b>. Cuantos más envíes, mayor el riesgo.</li>
