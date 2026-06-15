@@ -1,24 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSesion } from "@/lib/session";
-import { listarConversaciones } from "@/lib/services/chat";
+import { listarConversaciones, buscarEnMensajes } from "@/lib/services/chat";
 import { serializar } from "@/lib/serialize";
 
 export const dynamic = "force-dynamic";
 
-/** Lista de conversaciones para la bandeja (la usa el chat para refrescar en vivo). */
-export async function GET(_req: NextRequest) {
-  const s = await requireSesion();
-  if ("error" in s) return s.error;
-
-  const convs = serializar(await listarConversaciones());
-  const conversaciones = convs.map((c: any) => ({
+function mapearConv(c: any) {
+  return {
     id: c.id,
     contacto: { nombre: c.contacto.nombre, telefono: c.contacto.telefono },
+    responsableId: c.responsable?.id ?? null,
     noLeidos: c.noLeidos,
     ultimoMensajeAt: c.ultimoMensajeAt,
     preview: c.mensajes[0]?.contenido ?? (c.mensajes[0] ? "[archivo]" : ""),
     estado: c.estado,
     etiquetas: c.etiquetas ?? []
-  }));
-  return NextResponse.json({ conversaciones });
+  };
+}
+
+/** Lista de conversaciones para la bandeja. ?q=texto busca en contenido de mensajes. */
+export async function GET(req: NextRequest) {
+  const s = await requireSesion();
+  if ("error" in s) return s.error;
+
+  const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+
+  if (q.length >= 2) {
+    const raw = serializar(await buscarEnMensajes(q));
+    return NextResponse.json({ conversaciones: raw.map(mapearConv), esBusqueda: true });
+  }
+
+  const convs = serializar(await listarConversaciones());
+  return NextResponse.json({ conversaciones: convs.map(mapearConv) });
 }

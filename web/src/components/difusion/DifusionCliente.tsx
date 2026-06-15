@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Boton } from "@/components/ui";
 
 type Etiqueta = { id: string; nombre: string; color: string; total: number };
 type Plantilla = { id: string; nombre: string; contenido: string };
+
+const LIMITE_DIARIO = 50;
 
 export function DifusionCliente({ etiquetas, plantillas }: { etiquetas: Etiqueta[]; plantillas: Plantilla[] }) {
   const [etiquetaId, setEtiquetaId] = useState("");
   const [plantillaId, setPlantillaId] = useState("");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [resultado, setResultado] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [yaEnviados, setYaEnviados] = useState<number | null>(null);
 
   const etiqueta = etiquetas.find((e) => e.id === etiquetaId);
+  const restantes = yaEnviados !== null ? Math.max(0, LIMITE_DIARIO - yaEnviados) : null;
+
+  useEffect(() => {
+    fetch("/api/difusion")
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.yaEnviados === "number") setYaEnviados(d.yaEnviados); })
+      .catch(() => {});
+  }, []);
 
   function elegirPlantilla(id: string) {
     setPlantillaId(id);
@@ -21,9 +32,18 @@ export function DifusionCliente({ etiquetas, plantillas }: { etiquetas: Etiqueta
     if (p) setTexto(p.contenido);
   }
 
+  const destinatariosEfectivos = Math.min(etiqueta?.total ?? 0, restantes ?? LIMITE_DIARIO);
+
   async function enviar() {
     if (!etiquetaId || !texto.trim()) return;
-    if (!confirm(`Se enviará a ${etiqueta?.total ?? 0} contacto(s) con la etiqueta "${etiqueta?.nombre}". ¿Continuar?`)) return;
+    if (restantes !== null && restantes === 0) {
+      setResultado({ ok: false, texto: `Límite diario de ${LIMITE_DIARIO} mensajes alcanzado. Vuelve mañana.` });
+      return;
+    }
+    if (!confirm(
+      `Se enviará a ${destinatariosEfectivos} contacto(s) con la etiqueta "${etiqueta?.nombre}".\n\n` +
+      `⚠️ Cuantos más mensajes envíes, mayor el riesgo de baneo del número. Usa con responsabilidad.\n\n¿Continuar?`
+    )) return;
     setEnviando(true);
     setResultado(null);
     const res = await fetch("/api/difusion", {
@@ -33,17 +53,42 @@ export function DifusionCliente({ etiquetas, plantillas }: { etiquetas: Etiqueta
     });
     const d = await res.json().catch(() => ({}));
     setEnviando(false);
-    if (res.ok) setResultado(`✓ Enviados: ${d.enviados} · Fallidos: ${d.fallidos} · Total: ${d.total}`);
-    else setResultado(d.error ?? "Error al enviar");
+    if (res.ok) {
+      setYaEnviados(d.yaEnviadosHoy ?? null);
+      setResultado({ ok: true, texto: `✓ Enviados: ${d.enviados} · Fallidos: ${d.fallidos} · Usados hoy: ${d.yaEnviadosHoy}/${LIMITE_DIARIO}` });
+    } else {
+      setResultado({ ok: false, texto: d.error ?? "Error al enviar" });
+    }
   }
 
   return (
     <div className="max-w-lg space-y-4 p-4 md:p-6">
       <h1 className="text-xl font-bold text-navy">Difusión por etiqueta</h1>
-      <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-slate-600">
-        Envía un mensaje a todos los contactos de una etiqueta. Va con una pausa entre cada envío para
-        cuidar el número. Úsalo con responsabilidad (evita spam).
+
+      {/* Alerta de riesgo */}
+      <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-slate-700">
+        <p className="mb-1 font-semibold text-red-700">⚠️ Riesgo de baneo — lee antes de enviar</p>
+        <ul className="list-disc space-y-1 pl-4 text-slate-600">
+          <li>WhatsApp detecta patrones de envío masivo y puede <b>bloquear permanentemente</b> el número.</li>
+          <li>El límite es <b>{LIMITE_DIARIO} mensajes por día</b>. Cuantos más envíes, mayor el riesgo.</li>
+          <li>Evita enviar a contactos que no te conocen o que no dieron su número voluntariamente.</li>
+          <li>Si el número es nuevo (&lt; 3 meses), empieza con 10–20 mensajes al día e incrementa gradualmente.</li>
+        </ul>
       </div>
+
+      {/* Contador diario */}
+      {restantes !== null && (
+        <div className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+          restantes === 0 ? "border-red-200 bg-red-50 text-red-700" :
+          restantes < 15 ? "border-amber-200 bg-amber-50 text-amber-700" :
+          "border-slate-200 bg-slate-50 text-slate-600"
+        }`}>
+          <span>Enviados hoy: <b>{yaEnviados}</b> de {LIMITE_DIARIO}</span>
+          <span className={`font-semibold ${restantes === 0 ? "text-red-700" : "text-slate-700"}`}>
+            {restantes === 0 ? "Límite alcanzado" : `${restantes} disponibles`}
+          </span>
+        </div>
+      )}
 
       <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
         <label className="block space-y-1">
@@ -72,10 +117,25 @@ export function DifusionCliente({ etiquetas, plantillas }: { etiquetas: Etiqueta
           <span className="text-xs text-slate-400">Variables: {"{{nombre}}"}, {"{{telefono}}"}.</span>
         </label>
 
-        <Boton onClick={enviar} disabled={enviando || !etiquetaId || !texto.trim()}>
-          {enviando ? "Enviando…" : `Enviar a ${etiqueta?.total ?? 0} contacto(s)`}
+        {etiqueta && restantes !== null && (
+          <p className="text-xs text-slate-500">
+            La etiqueta tiene {etiqueta.total} contacto(s).
+            {etiqueta.total > restantes
+              ? ` Solo se enviarán ${restantes} (límite diario restante).`
+              : " Se enviará a todos."}
+          </p>
+        )}
+
+        <Boton
+          onClick={enviar}
+          disabled={enviando || !etiquetaId || !texto.trim() || restantes === 0}
+        >
+          {enviando ? `Enviando… (pausa entre cada mensaje)` : `Enviar a ${destinatariosEfectivos} contacto(s)`}
         </Boton>
-        {resultado && <p className="text-sm text-slate-700">{resultado}</p>}
+
+        {resultado && (
+          <p className={`text-sm ${resultado.ok ? "text-slate-700" : "text-red-600"}`}>{resultado.texto}</p>
+        )}
       </div>
     </div>
   );

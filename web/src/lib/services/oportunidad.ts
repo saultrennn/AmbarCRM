@@ -4,7 +4,7 @@ export function getOportunidad(id: bigint) {
   return db.oportunidad.findUnique({
     where: { id },
     include: {
-      contacto: true,
+      contacto: { include: { conversaciones: { select: { id: true }, take: 1 } } },
       etapa: true,
       embudo: true,
       responsable: true,

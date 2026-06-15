@@ -34,6 +34,8 @@ const AJUSTES_DEFAULT = {
   fueraHorarioTexto: "" as string | null,
   autoResolverActivo: false,
   autoResolverHoras: 24,
+  nombreNegocio: "" as string | null,
+  iaPromptSistema: "" as string | null,
   updatedAt: new Date()
 };
 
@@ -58,6 +60,8 @@ export async function actualizarAjustes(data: {
   fueraHorarioTexto?: string | null;
   autoResolverActivo?: boolean;
   autoResolverHoras?: number;
+  nombreNegocio?: string | null;
+  iaPromptSistema?: string | null;
 }) {
   const a = await db.ajustes.findFirst({ orderBy: { id: "asc" } });
   if (a) return db.ajustes.update({ where: { id: a.id }, data });

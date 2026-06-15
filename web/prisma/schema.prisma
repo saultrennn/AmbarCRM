@@ -335,6 +335,7 @@ model Mensaje {
   mediaUrl       String?       @map("media_url")
   mediaMime      String?       @map("media_mime")
   interna        Boolean       @default(false)
+  esDifusion     Boolean       @default(false) @map("es_difusion")
   status         StatusMsg     @default(enviado)
   waMessageId    String?       @unique @map("wa_message_id")
   enviadoPor     BigInt?       @map("enviado_por")
@@ -407,6 +408,9 @@ model Ajustes {
   // Auto-resolver
   autoResolverActivo Boolean @default(false) @map("auto_resolver_activo")
   autoResolverHoras  Int     @default(24) @map("auto_resolver_horas")
+  // IA
+  nombreNegocio    String?  @map("nombre_negocio")
+  iaPromptSistema  String?  @map("ia_prompt_sistema")
   updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("ajustes")

@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const data: Record<string, unknown> = {};
   const bools = ["autoAsignar", "bienvenidaActiva", "crearLeadAuto", "csatActivo", "horarioActivo", "autoResolverActivo"];
-  const strs = ["bienvenidaTexto", "csatTexto", "horarioInicio", "horarioFin", "horarioDias", "fueraHorarioTexto"];
+  const strs = ["bienvenidaTexto", "csatTexto", "horarioInicio", "horarioFin", "horarioDias", "fueraHorarioTexto", "nombreNegocio", "iaPromptSistema"];
   for (const k of bools) if (typeof body[k] === "boolean") data[k] = body[k];
   for (const k of strs) if (typeof body[k] === "string") data[k] = body[k];
   if (typeof body.autoResolverHoras === "number") data.autoResolverHoras = body.autoResolverHoras;

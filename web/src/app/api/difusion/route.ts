@@ -7,14 +7,28 @@ import { aplicarVariables } from "@/lib/plantillas";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const TOPE = 1000;
+const LIMITE_DIARIO = 50;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const delayAleatorio = () => sleep(1200 + Math.random() * 1800); // 1.2–3 s
 
 /**
- * Envía una plantilla a todos los contactos de una etiqueta (difusión).
- * Body: { etiquetaId, plantillaId? , texto? }
- * Throttle entre mensajes para no quemar el número (anti-spam de Evolution).
+ * Envía una plantilla a contactos de una etiqueta (difusión).
+ * Límite: 50 mensajes por día para reducir riesgo de baneo.
+ * Throttle aleatorio entre mensajes (1.2–3 s).
  */
+export async function GET(_req: NextRequest) {
+  const s = await requireSesion();
+  if ("error" in s) return s.error;
+
+  const inicio = new Date();
+  inicio.setHours(0, 0, 0, 0);
+  const yaEnviados = await db.mensaje.count({
+    where: { esDifusion: true, createdAt: { gte: inicio } }
+  });
+
+  return NextResponse.json({ yaEnviados, restantes: Math.max(0, LIMITE_DIARIO - yaEnviados), limiteDiario: LIMITE_DIARIO });
+}
+
 export async function POST(req: NextRequest) {
   const s = await requireSesion(true);
   if ("error" in s) return s.error;
@@ -29,12 +43,27 @@ export async function POST(req: NextRequest) {
   }
   if (!contenido.trim()) return NextResponse.json({ error: "falta el mensaje" }, { status: 400 });
 
+  // Verificar cuántos difusión se enviaron hoy
+  const inicio = new Date();
+  inicio.setHours(0, 0, 0, 0);
+  const yaEnviados = await db.mensaje.count({
+    where: { esDifusion: true, createdAt: { gte: inicio } }
+  });
+  const restantes = Math.max(0, LIMITE_DIARIO - yaEnviados);
+
+  if (restantes === 0) {
+    return NextResponse.json(
+      { error: `Límite diario alcanzado (${LIMITE_DIARIO} mensajes). Vuelve mañana para proteger el número de baneo.` },
+      { status: 429 }
+    );
+  }
+
   const canal = await db.canalWhatsapp.findFirst({ where: { activo: true } });
   const provider = getProvider(canal?.proveedor ?? "evolution");
 
   const contactos = await db.contacto.findMany({
     where: { telefono: { not: null }, etiquetas: { some: { etiquetaId: BigInt(etiquetaId) } } },
-    take: TOPE
+    take: restantes
   });
 
   let enviados = 0;
@@ -56,6 +85,7 @@ export async function POST(req: NextRequest) {
         direccion: "saliente",
         tipo: "texto",
         contenido: msg,
+        esDifusion: true,
         status: envio.ok ? "enviado" : "fallido",
         waMessageId: envio.waMessageId,
         enviadoPor: s.userId
@@ -63,8 +93,16 @@ export async function POST(req: NextRequest) {
     });
 
     envio.ok ? enviados++ : fallidos++;
-    await sleep(800); // throttle anti-spam
+    await delayAleatorio();
   }
 
-  return NextResponse.json({ ok: true, total: contactos.length, enviados, fallidos });
+  const nuevosYaEnviados = yaEnviados + enviados;
+  return NextResponse.json({
+    ok: true,
+    total: contactos.length,
+    enviados,
+    fallidos,
+    yaEnviadosHoy: nuevosYaEnviados,
+    restantesHoy: Math.max(0, LIMITE_DIARIO - nuevosYaEnviados)
+  });
 }

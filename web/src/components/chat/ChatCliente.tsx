@@ -13,6 +13,7 @@ type EtiquetaDef = { id: string; nombre: string; color: string };
 export type ConversacionItem = {
   id: string;
   contacto: { nombre: string; telefono: string | null };
+  responsableId: string | null;
   noLeidos: number;
   ultimoMensajeAt: string | null;
   preview: string;
@@ -99,13 +100,15 @@ export function ChatCliente({
   plantillas,
   usuarios = [],
   embudos = [],
-  etiquetas = []
+  etiquetas = [],
+  usuarioId
 }: {
   conversaciones: ConversacionItem[];
   plantillas: Plantilla[];
   usuarios?: Usuario[];
   embudos?: Embudo[];
   etiquetas?: EtiquetaDef[];
+  usuarioId?: string;
 }) {
   const [convs, setConvs] = useState<ConversacionItem[]>(conversaciones);
   const [selId, setSelId] = useState<string | null>(null);
@@ -116,6 +119,8 @@ export function ChatCliente({
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroEtiqueta, setFiltroEtiqueta] = useState("");
+  const [filtroResponsable, setFiltroResponsable] = useState<"" | "mias" | "sinasignar">("");
+  const [buscandoMensajes, setBuscandoMensajes] = useState(false);
   const [notaInterna, setNotaInterna] = useState(false);
   const [sugiriendo, setSugiriendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
@@ -129,6 +134,9 @@ export function ChatCliente({
   convsRef.current = convs;
 
   const seleccionada = convs.find((c) => c.id === selId) ?? null;
+  const sinAsignarCount = convs.filter((c) => !c.responsableId && c.estado !== "cerrada").length;
+  const misCount = usuarioId ? convs.filter((c) => c.responsableId === usuarioId).length : 0;
+
   const q = busqueda.toLowerCase().trim();
   const convsFiltradas = convs
     .filter((c) => {
@@ -139,6 +147,8 @@ export function ChatCliente({
       )) return false;
       if (filtroEstado && c.estado !== filtroEstado) return false;
       if (filtroEtiqueta && !c.etiquetas.includes(filtroEtiqueta)) return false;
+      if (filtroResponsable === "mias" && c.responsableId !== usuarioId) return false;
+      if (filtroResponsable === "sinasignar" && c.responsableId !== null) return false;
       return true;
     })
     // Más reciente arriba (como WhatsApp); al responder o llegar mensaje, sube al tope.
@@ -167,6 +177,27 @@ export function ChatCliente({
     setSelId(id);
     setConvs((prev) => prev.map((c) => (c.id === id ? { ...c, noLeidos: 0 } : c)));
     cargarMensajes(id);
+  }
+
+  async function buscarEnHistorial() {
+    if (busqueda.trim().length < 2) return;
+    setBuscandoMensajes(true);
+    const res = await fetch(`/api/conversaciones?q=${encodeURIComponent(busqueda.trim())}`);
+    if (res.ok) {
+      const data = await res.json();
+      setConvs(data.conversaciones);
+    }
+    setBuscandoMensajes(false);
+  }
+
+  async function cambiarEstadoConv(convId: string, nuevoEstado: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    await fetch(`/api/conversaciones/${convId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: nuevoEstado })
+    });
+    setConvs((prev) => prev.map((c) => c.id === convId ? { ...c, estado: nuevoEstado } : c));
   }
 
   // Pide permiso de notificaciones una vez.
@@ -327,15 +358,49 @@ export function ChatCliente({
     <div className="flex h-full">
       {/* Lista de conversaciones */}
       <div className={`w-full border-r border-slate-200 bg-white md:w-80 ${selId ? "hidden md:block" : ""}`}>
-        <div className="border-b border-slate-200 px-4 py-3">
-          <p className="mb-2 font-semibold text-navy">Conversaciones</p>
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar conversación…"
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-navy/30"
-          />
-          <div className="mt-2 flex gap-2">
+        <div className="border-b border-slate-200 px-4 py-3 space-y-2">
+          <p className="font-semibold text-navy">Conversaciones</p>
+          {/* Búsqueda */}
+          <div className="flex gap-1">
+            <input
+              value={busqueda}
+              onChange={(e) => { setBusqueda(e.target.value); }}
+              onKeyDown={(e) => { if (e.key === "Enter") buscarEnHistorial(); }}
+              placeholder="Buscar…"
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-navy/30"
+            />
+            <button
+              onClick={buscarEnHistorial}
+              disabled={buscandoMensajes || busqueda.trim().length < 2}
+              title="Buscar también en el historial de mensajes (Enter)"
+              className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-40"
+            >
+              {buscandoMensajes ? "…" : "Historial"}
+            </button>
+            {busqueda && (
+              <button
+                onClick={() => { setBusqueda(""); refrescarLista(); }}
+                className="shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-400 hover:bg-slate-50"
+              >✕</button>
+            )}
+          </div>
+          {/* Filtros de responsable */}
+          <div className="flex gap-1">
+            {(["", "mias", "sinasignar"] as const).map((v) => {
+              const label = v === "" ? "Todas" : v === "mias" ? `Mis (${misCount})` : `Sin asignar${sinAsignarCount > 0 ? ` (${sinAsignarCount})` : ""}`;
+              return (
+                <button
+                  key={v}
+                  onClick={() => setFiltroResponsable(v)}
+                  className={`flex-1 rounded-lg py-1 text-[11px] font-medium ${filtroResponsable === v ? "bg-navy text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Filtros estado / etiqueta */}
+          <div className="flex gap-2">
             <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}
               className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-xs">
               <option value="">Todos</option>
@@ -355,29 +420,42 @@ export function ChatCliente({
         <div className="scroll-thin h-[calc(100%-128px)] overflow-y-auto">
           {convsFiltradas.length === 0 && <p className="p-4 text-sm text-slate-400">Sin conversaciones.</p>}
           {convsFiltradas.map((c) => (
-            <button
+            <div
               key={c.id}
-              onClick={() => abrir(c.id)}
-              className={`flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50 ${
+              className={`group relative flex items-center gap-3 border-b border-slate-100 px-4 py-3 hover:bg-slate-50 ${
                 selId === c.id ? "bg-slate-100" : ""
               }`}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy/10 text-sm font-bold text-navy">
-                {c.contacto.nombre.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between">
-                  <span className="truncate text-sm font-medium text-slate-800">{c.contacto.nombre}</span>
-                  <span className="ml-2 shrink-0 text-[10px] text-slate-400">{hora(c.ultimoMensajeAt)}</span>
+              <button
+                onClick={() => abrir(c.id)}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-navy/10 text-sm font-bold text-navy">
+                  {c.contacto.nombre.slice(0, 2).toUpperCase()}
                 </span>
-                <span className="truncate block text-xs text-slate-500">{c.preview}</span>
-              </span>
-              {c.noLeidos > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
-                  {c.noLeidos}
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between">
+                    <span className="truncate text-sm font-medium text-slate-800">{c.contacto.nombre}</span>
+                    <span className="ml-2 shrink-0 text-[10px] text-slate-400">{hora(c.ultimoMensajeAt)}</span>
+                  </span>
+                  <span className="truncate block text-xs text-slate-500">{c.preview}</span>
                 </span>
-              )}
-            </button>
+              </button>
+              <div className="flex shrink-0 flex-col items-center gap-1">
+                {c.noLeidos > 0 && (
+                  <span className="grid h-5 min-w-5 place-items-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
+                    {c.noLeidos}
+                  </span>
+                )}
+                <button
+                  onClick={(e) => cambiarEstadoConv(c.id, c.estado === "cerrada" ? "abierta" : "cerrada", e)}
+                  title={c.estado === "cerrada" ? "Reabrir conversación" : "Cerrar conversación"}
+                  className="hidden h-5 w-5 place-items-center rounded text-slate-300 hover:bg-slate-200 hover:text-slate-600 group-hover:grid"
+                >
+                  {c.estado === "cerrada" ? "↩" : "✓"}
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </div>

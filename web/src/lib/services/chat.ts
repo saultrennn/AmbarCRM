@@ -12,6 +12,27 @@ export function listarConversaciones() {
   });
 }
 
+/** Busca conversaciones donde algún mensaje contenga el texto (para búsqueda global). */
+export function buscarEnMensajes(q: string) {
+  return db.conversacion.findMany({
+    where: {
+      mensajes: {
+        some: {
+          contenido: { contains: q, mode: "insensitive" },
+          interna: false
+        }
+      }
+    },
+    orderBy: { ultimoMensajeAt: "desc" },
+    take: 30,
+    include: {
+      contacto: true,
+      responsable: true,
+      mensajes: { orderBy: { timestamp: "desc" }, take: 1 }
+    }
+  });
+}
+
 /** Mensajes de una conversación en orden cronológico. */
 export function getMensajes(conversacionId: bigint) {
   return db.mensaje.findMany({

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireSesion } from "@/lib/session";
+import { getAjustes } from "@/lib/services/config";
 
 export const dynamic = "force-dynamic";
 
 const API_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const MODELO = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001";
 
-const SISTEMA =
-  "Eres un asistente de atención al cliente por WhatsApp para un negocio en México. " +
+const PROMPT_DEFAULT =
+  "Eres un asistente de atención al cliente por WhatsApp. " +
   "A partir de la conversación, redacta la SIGUIENTE respuesta del AGENTE: breve, cordial, " +
   "en español neutro, lista para enviar. Devuelve SOLO el texto del mensaje, sin comillas ni explicaciones.";
 
@@ -24,11 +25,26 @@ export async function POST(req: NextRequest) {
   const { conversacionId } = await req.json().catch(() => ({}));
   if (!conversacionId) return NextResponse.json({ error: "falta conversacionId" }, { status: 400 });
 
-  const conv = await db.conversacion.findUnique({
-    where: { id: BigInt(conversacionId) },
-    include: { contacto: true, mensajes: { orderBy: { timestamp: "desc" }, take: 12 } }
-  });
+  const [conv, ajustes] = await Promise.all([
+    db.conversacion.findUnique({
+      where: { id: BigInt(conversacionId) },
+      include: {
+        contacto: { include: { etiquetas: { include: { etiqueta: true } } } },
+        mensajes: { orderBy: { timestamp: "desc" }, take: 12 }
+      }
+    }),
+    getAjustes()
+  ]);
   if (!conv) return NextResponse.json({ error: "conversación inexistente" }, { status: 404 });
+
+  const nombreNegocio = ajustes.nombreNegocio?.trim() || null;
+  const promptBase = ajustes.iaPromptSistema?.trim() || PROMPT_DEFAULT;
+
+  const etiquetasContacto = conv.contacto.etiquetas.map((ce: any) => ce.etiqueta.nombre).join(", ");
+
+  let sistema = promptBase;
+  if (nombreNegocio) sistema = `Trabajas para "${nombreNegocio}". ` + sistema;
+  if (etiquetasContacto) sistema += ` El contacto tiene las etiquetas: ${etiquetasContacto}.`;
 
   const historial = conv.mensajes
     .reverse()
@@ -49,7 +65,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: MODELO,
         max_tokens: 400,
-        system: SISTEMA,
+        system: sistema,
         messages: [{ role: "user", content: `Conversación con ${conv.contacto.nombre}:\n\n${historial}` }]
       })
     });
