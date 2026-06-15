@@ -14,7 +14,7 @@ type Detalle = {
   botActivo: boolean;
   etiquetas: string[];
   responsableId: string | null;
-  contacto: Contacto;
+  contacto: Contacto & { esPersonal: boolean };
   oportunidades: Oportunidad[];
 };
 type EtiquetaDef = { id: string; nombre: string; color: string };
@@ -199,11 +199,34 @@ export function PanelConversacion({
         <button
           onClick={() => patch({ botActivo: !d.botActivo })}
           className={`relative h-5 w-9 rounded-full transition ${d.botActivo ? "bg-green-500" : "bg-slate-300"}`}
-          title={d.botActivo ? "Pausar bot (lo atiendes tú)" : "Reactivar bot"}
+          title={d.botActivo ? "Pausar bot (lo atiendes tu)" : "Reactivar bot"}
         >
           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${d.botActivo ? "left-[18px]" : "left-0.5"}`} />
         </button>
       </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+        <span className="text-sm text-slate-700">Contacto personal</span>
+        <button
+          onClick={async () => {
+            await fetch(`/api/contactos/${d.contacto.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ esPersonal: !d.contacto.esPersonal })
+            });
+            await cargar();
+          }}
+          className={`relative h-5 w-9 rounded-full transition ${d.contacto.esPersonal ? "bg-slate-400" : "bg-slate-300"}`}
+          title={d.contacto.esPersonal ? "Quitar de Personal (vuelve a la bandeja principal)" : "Marcar como Personal (familia/amigos — el bot no responde)"}
+        >
+          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${d.contacto.esPersonal ? "left-[18px]" : "left-0.5"}`} />
+        </button>
+      </div>
+      {d.contacto.esPersonal && (
+        <p className="text-[11px] text-slate-400">
+          Marcado como Personal: el bot no responde, los archivos no se guardan y aparece en la bandeja Personal.
+        </p>
+      )}
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-500">Estado: <b className="capitalize text-slate-700">{d.estado}</b></span>

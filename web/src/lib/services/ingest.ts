@@ -69,11 +69,15 @@ export async function ingestarEntrante(m: MensajeEntranteNormalizado, canalId: b
     });
   }
 
+  // Contacto personal (familia/amigos): guarda solo texto, sin bot, sin lead, sin media.
+  const esPersonal = contacto.esPersonal;
+
   // El media de WhatsApp viene cifrado: lo descargamos y guardamos local para poder verlo.
   // Se hace ANTES de crear el mensaje para que el INSERT (y el NOTIFY del SSE) ya traiga la URL servible.
+  // Para contactos personales omitimos la descarga y guardado de media.
   let mediaUrl = m.mediaUrl;
   let mediaMime = m.mediaMime;
-  if (m.tipo !== "texto" && m.raw && provider.descargarMedia) {
+  if (m.tipo !== "texto" && m.raw && provider.descargarMedia && !esPersonal) {
     const media = await provider.descargarMedia(m.raw, instancia);
     if (media) {
       mediaUrl = await guardarMediaBase64(media.base64, media.mime);
@@ -107,6 +111,11 @@ export async function ingestarEntrante(m: MensajeEntranteNormalizado, canalId: b
   // Si lo mandó el propio número (desde el celular), no hay nada más que hacer:
   // no es un lead entrante, no notifica al bot, ni CSAT, ni bienvenida.
   if (esSaliente) {
+    return { duplicado: false as const, mensajeId: mensaje.id, conversacionId: conversacion.id };
+  }
+
+  // Contacto personal: guardamos el mensaje pero no procesamos nada más.
+  if (esPersonal) {
     return { duplicado: false as const, mensajeId: mensaje.id, conversacionId: conversacion.id };
   }
 

@@ -14,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (campo in body) data[campo] = body[campo] || null;
   }
   if ("responsableId" in body) data.responsableId = body.responsableId ? BigInt(body.responsableId) : null;
+  if (typeof body.esPersonal === "boolean") data.esPersonal = body.esPersonal;
 
   await db.contacto.update({ where: { id: BigInt(params.id) }, data });
   return NextResponse.json({ ok: true });
