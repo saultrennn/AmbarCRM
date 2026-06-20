@@ -23,8 +23,8 @@ export async function GET(_req: NextRequest) {
   const inicio = new Date();
   inicio.setHours(0, 0, 0, 0);
   const yaEnviados = await db.mensaje.count({
-    where: { esDifusion: true, createdAt: { gte: inicio } }
-  });
+  where: { createdAt: { gte: inicio } }
+});
 
   return NextResponse.json({ yaEnviados, restantes: Math.max(0, LIMITE_DIARIO - yaEnviados), limiteDiario: LIMITE_DIARIO });
 }
@@ -85,7 +85,6 @@ export async function POST(req: NextRequest) {
         direccion: "saliente",
         tipo: "texto",
         contenido: msg,
-        esDifusion: true,
         status: envio.ok ? "enviado" : "fallido",
         waMessageId: envio.waMessageId,
         enviadoPor: s.userId
