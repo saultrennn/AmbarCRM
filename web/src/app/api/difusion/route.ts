@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
   const inicio = new Date();
   inicio.setHours(0, 0, 0, 0);
   const yaEnviados = await db.mensaje.count({
-    where: { esDifusion: true, createdAt: { gte: inicio } }
-  });
+  where: { createdAt: { gte: inicio } }
+});
   const restantes = Math.max(0, LIMITE_DIARIO - yaEnviados);
 
   if (restantes === 0) {
