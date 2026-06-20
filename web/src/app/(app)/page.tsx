@@ -93,6 +93,86 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-2">
+
+  {/* Conversión por embudo */}
+  <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <h2 className="mb-3 text-sm font-semibold text-slate-600">
+      Tasa de conversión por embudo
+    </h2>
+
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between">
+        <span>Ventas</span>
+        <span>35%</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span>Servicios</span>
+        <span>48%</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Tiempo promedio por etapa */}
+  <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <h2 className="mb-3 text-sm font-semibold text-slate-600">
+      Tiempo promedio por etapa
+    </h2>
+
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between">
+        <span>Prospecto</span>
+        <span>4 días</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span>Negociación</span>
+        <span>7 días</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Ganadas / Perdidas */}
+  <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <h2 className="mb-3 text-sm font-semibold text-slate-600">
+      Oportunidades ganadas / perdidas
+    </h2>
+
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between">
+        <span>Ganadas</span>
+        <span className="text-green-600">18</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span>Perdidas</span>
+        <span className="text-red-600">7</span>
+      </div>
+    </div>
+  </div>
+
+  {/* Actividad por agente */}
+  <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <h2 className="mb-3 text-sm font-semibold text-slate-600">
+      Actividad por agente
+    </h2>
+
+    <div className="space-y-2 text-sm">
+      <div className="flex justify-between">
+        <span>Admin</span>
+        <span>25 tareas · 120 mensajes</span>
+      </div>
+
+      <div className="flex justify-between">
+        <span>Juan</span>
+        <span>18 tareas · 90 mensajes</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
       {/* Reportes descargables */}
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-600">Reportes (CSV)</h2>

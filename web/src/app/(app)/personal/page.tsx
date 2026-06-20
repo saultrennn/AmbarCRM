@@ -12,9 +12,8 @@ export default async function PersonalPage() {
   if (!sesion?.user) redirect("/login");
 
   const convs = serializar(
-    await db.conversacion.findMany({
-      where: { contacto: { esPersonal: true } },
-      orderBy: { ultimoMensajeAt: "desc" },
+  await db.conversacion.findMany({
+    orderBy: { ultimoMensajeAt: "desc" },
       include: {
         contacto: true,
         mensajes: { orderBy: { timestamp: "desc" }, take: 1 }
