@@ -12,7 +12,6 @@ export async function GET() {
 
   const convs = serializar(
     await db.conversacion.findMany({
-      where: { contacto: { esPersonal: true } },
       orderBy: { ultimoMensajeAt: "desc" },
       include: {
         contacto: true,
