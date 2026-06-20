@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
   ]);
   if (!conv) return NextResponse.json({ error: "conversación inexistente" }, { status: 404 });
 
-  const nombreNegocio = ajustes.nombreNegocio?.trim() || null;
-  const promptBase = ajustes.iaPromptSistema?.trim() || PROMPT_DEFAULT;
+  const nombreNegocio = null;
+  const promptBase = PROMPT_DEFAULT;
 
   const etiquetasContacto = conv.contacto.etiquetas.map((ce: any) => ce.etiqueta.nombre).join(", ");
 
